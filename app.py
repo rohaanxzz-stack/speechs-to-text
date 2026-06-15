@@ -4,6 +4,7 @@ import tensorflow as tf
 from gtts import gTTS
 import speech_recognition as sr
 from pydub import AudioSegment
+from st_audiorec import st_audiorec
 
 # --- MUST BE THE FIRST STREAMLIT COMMAND ---
 st.set_page_config(page_title="Free Speech & Text Studio", layout="centered", page_icon="🎙️")
@@ -21,14 +22,22 @@ _ = init_tf_runtime()
 
 
 # --- HELPER AUDIO CONVERTER ---
-def convert_to_wav(uploaded_file):
-    """Converts uploaded human speech files safely into standard PCM WAV format."""
-    file_extension = uploaded_file.name.split(".")[-1].lower()
-    audio = AudioSegment.from_file(uploaded_file, format=file_extension)
-    
-    # Export as standard mono 16kHz WAV format required for speech recognition engines
+def process_recorded_audio(wav_bytes):
+    """Processes browser microphone audio data safely into standard PCM WAV format."""
+    # Write the raw recording bytes to a temporary file
+    temp_raw_path = "temp_raw_record.wav"
+    with open(temp_raw_path, "wb") as f:
+        f.write(wav_bytes)
+        
+    # Read and normalize audio stream settings using pydub
+    audio = AudioSegment.from_file(temp_raw_path, format="wav")
     wav_path = "temp_converted.wav"
     audio.set_frame_rate(16000).set_channels(1).export(wav_path, format="wav")
+    
+    # Clean up the raw file
+    if os.path.exists(temp_raw_path):
+        os.remove(temp_raw_path)
+        
     return wav_path
 
 
@@ -39,21 +48,20 @@ st.caption("Powered by completely free, tokenless cloud APIs and native TensorFl
 tab1, tab2 = st.tabs(["🗣️ Original Speech to Text", "📢 Natural Text to Speech"])
 
 
-# --- TAB 1: ORIGINAL SPEECH TO TEXT (STT) ---
+# --- TAB 1: ORIGINAL SPEECH TO TEXT (STT) VIA LIVE MIC ---
 with tab1:
     st.header("Original Human Speech Transcription")
-    st.write("Upload an audio file (.wav, .mp3, or .m4a) containing real voice audio to parse out its text content.")
+    st.write("Click the button below to allow browser microphone access and record your voice:")
     
-    uploaded_audio = st.file_uploader("Upload Audio Sample File", type=["wav", "mp3", "m4a"])
+    # Renders a native HTML5 browser microphone capture console widget
+    wav_audio_data = st_audiorec()
     
-    if uploaded_audio is not None:
-        st.audio(uploaded_audio)
-        
-        if st.button("Transcribe Audio File", type="primary"):
+    if wav_audio_data is not None:
+        if st.button("Transcribe Recorded Audio", type="primary"):
             with st.spinner("Processing audio track through semantic recognition nodes..."):
                 try:
-                    # Cleanly convert file formatting locally
-                    wav_path = convert_to_wav(uploaded_audio)
+                    # Cleanly process and format the live microphone array
+                    wav_path = process_recorded_audio(wav_audio_data)
                     
                     # Instantiate open-source SpeechRecognizer stack
                     recognizer = sr.Recognizer()
@@ -71,7 +79,7 @@ with tab1:
                         os.remove(wav_path)
                         
                 except sr.UnknownValueError:
-                    st.error("Engine could not understand the speech patterns clearly. Please verify the audio clip clarity.")
+                    st.error("Engine could not understand the speech patterns clearly. Please try speaking closer to the microphone.")
                 except sr.RequestError as e:
                     st.error(f"Cloud Network Processing Error: {e}")
                 except Exception as e:
