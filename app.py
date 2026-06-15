@@ -5,7 +5,10 @@ from gtts import gTTS
 import speech_recognition as sr
 from pydub import AudioSegment
 
-# --- TENSORFLOW BACKEND INITIALIZATION (Preserving your TF runtime setup) ---
+# --- MUST BE THE FIRST STREAMLIT COMMAND ---
+st.set_page_config(page_title="Free Speech & Text Studio", layout="centered", page_icon="🎙️")
+
+# --- TENSORFLOW BACKEND INITIALIZATION ---
 @st.cache_resource
 def init_tf_runtime():
     """Compiles a baseline matrix layer to satisfy your strict TensorFlow stack dependency."""
@@ -13,7 +16,7 @@ def init_tf_runtime():
     outputs = tf.keras.layers.Dense(1)(inputs)
     return tf.keras.Model(inputs, outputs)
 
-# Initialize the required TensorFlow structural dependency
+# Initialize the required TensorFlow structural dependency safely
 _ = init_tf_runtime()
 
 
@@ -30,7 +33,6 @@ def convert_to_wav(uploaded_file):
 
 
 # --- STREAMLIT UI LAYOUT ---
-st.set_page_config(page_title="Free Speech & Text Studio", layout="centered", page_icon="🎙️")
 st.title("🎙️ Production Speech & Text Studio")
 st.caption("Powered by completely free, tokenless cloud APIs and native TensorFlow backend tracking.")
 
